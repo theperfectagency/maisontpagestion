@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TPA — Logiciel de Gestion</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --gold:#c9a84c;--gold-l:#e2c278;--gold-bg:rgba(201,168,76,0.08);--gold-border:rgba(201,168,76,0.2);
+  --black:#0a0a0a;--d1:#111;--d2:#161616;--d3:#1c1c1c;--d4:#222;
+  --white:#f5f0e8;--grey:#666;--grey-l:#999;
+  --success:#4caf7d;--warning:#e8b84b;--danger:#e05c5c;
+  --sidebar-w:220px;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Outfit',sans-serif;
+  --trans:all 0.25s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;}
+body{background:var(--black);color:var(--white);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+
+/* ── LAYOUT ── */
+.app-layout{display:flex;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--d1);border-right:1px solid var(--gold-border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;z-index:200;
+  overflow-y:auto;transition:transform 0.3s ease;
+}
+.sidebar.closed{transform:translateX(-100%);}
+.main-content{margin-left:var(--sidebar-w);flex:1;padding:28px 32px;min-height:100vh;}
+
+/* ── TOPBAR (mobile) ── */
+.topbar{
+  display:none;position:sticky;top:0;z-index:190;
+  background:var(--d1);border-bottom:1px solid var(--gold-border);
+  padding:0 16px;height:52px;align-items:center;justify-content:space-between;
+}
+.topbar-logo{font-family:var(--serif);font-size:1.3rem;font-weight:300;}
+.topbar-logo span{color:var(--gold);}
+.menu-btn{background:none;border:none;color:var(--gold);font-size:1.3rem;cursor:pointer;padding:8px;}
+
+/* ── SIDEBAR BRAND ── */
+.sb-brand{padding:24px 20px 16px;border-bottom:1px solid var(--gold-border);}
+.sb-logo{font-family:var(--serif);font-size:1.4rem;font-weight:300;color:var(--white);}
+.sb-logo span{color:var(--gold);}
+.sb-tagline{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--grey);margin-top:3px;}
+
+/* ── NAV ── */
+.sb-section{padding:16px 0 4px;}
+.sb-section-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--grey);padding:4px 20px 8px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 20px;
+  cursor:pointer;transition:var(--trans);color:var(--grey);font-size:12px;
+  border-left:2px solid transparent;user-select:none;
+}
+.nav-item:hover{color:var(--white);background:rgba(255,255,255,0.03);}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:var(--gold-bg);}
+.nav-icon{font-size:13px;width:16px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;}
+.sb-bottom{padding:16px 20px;border-top:1px solid var(--gold-border);margin-top:auto;}
+.sb-info{font-size:10px;color:var(--grey);line-height:1.7;}
+.sb-info strong{color:var(--gold);}
+
+/* ── PANELS ── */
+.panel{display:none;}
+.panel.active{display:block;animation:fadeUp 0.3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── PAGE HEADERS ── */
+.page-title{font-family:var(--serif);font-size:2rem;font-weight:300;line-height:1.1;margin-bottom:4px;}
+.page-title em{font-style:italic;color:var(--gold);}
+.page-sub{font-size:11px;color:var(--grey);margin-bottom:24px;letter-spacing:0.5px;}
+
+/* ── CARDS & PANELS ── */
+.card{background:var(--d2);border:1px solid var(--gold-border);border-radius:0;margin-bottom:16px;}
+.card-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);padding:14px 18px;border-bottom:1px solid var(--gold-border);}
+.card-body{padding:18px;}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.kpi{background:var(--d2);border:1px solid var(--gold-border);border-top:2px solid var(--gold);padding:16px;}
+.kpi-val{font-family:var(--serif);font-size:2rem;color:var(--gold);line-height:1;}
+.kpi-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-top:4px;}
+.kpi-sub{font-size:10px;color:var(--grey-l);margin-top:2px;}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);padding:8px 12px;border-bottom:1px solid var(--gold-border);font-weight:500;}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.table-wrap{overflow-x:auto;}
+
+/* ── FORMS ── */
+.fg{margin-bottom:14px;}
+.fg label,.form-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:5px;}
+.fg input,.fg select,.fg textarea,
+.form-input,.form-select,.form-textarea{
+  width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--gold-border);
+  color:var(--white);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:var(--trans);
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus,
+.form-input:focus,.form-select:focus{border-color:var(--gold);}
+.fg select option,.form-select option{background:var(--d2);}
+.fg textarea,.form-textarea{min-height:80px;resize:vertical;}
+.form-row,.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{margin-bottom:14px;}
+.form-group.full{grid-column:1/-1;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-family:var(--sans);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:var(--trans);font-weight:500;}
+.btn-gold{background:var(--gold);color:#000;}
+.btn-gold:hover{background:var(--gold-l);}
+.btn-ghost{background:transparent;color:var(--grey);border:1px solid rgba(255,255,255,0.1);}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:rgba(224,92,92,0.12);color:var(--danger);border:1px solid rgba(224,92,92,0.2);}
+.btn-danger:hover{background:rgba(224,92,92,0.22);}
+.btn-sm{padding:5px 11px;font-size:10px;}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:500;}
+.badge-success{background:rgba(76,175,125,0.15);color:var(--success);}
+.badge-warning{background:rgba(232,184,75,0.15);color:var(--warning);}
+.badge-danger{background:rgba(224,92,92,0.15);color:var(--danger);}
+.badge-gold{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-border);}
+.badge-grey{background:rgba(255,255,255,0.06);color:var(--grey-l);}
+
+/* ── SEARCH ── */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--d2);border:1px solid var(--gold-border);padding:0 12px;}
+.search-bar input{background:none;border:none;color:var(--white);padding:9px 4px;font-family:var(--sans);font-size:13px;outline:none;flex:1;}
+.search-bar input::placeholder{color:var(--grey);}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+
+/* ── PROGRESS ── */
+.progress-wrap{background:rgba(255,255,255,0.06);height:4px;border-radius:2px;margin-top:6px;}
+.progress-bar{height:4px;background:var(--gold);border-radius:2px;transition:width 0.5s ease;}
+
+/* ── GESTION INTERNE MODULE ── */
+.admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.admin-card{background:var(--d2);border:1px solid var(--gold-border);border-top:2px solid var(--gold);padding:20px;cursor:pointer;transition:var(--trans);}
+.admin-card:hover{background:var(--d3);border-color:rgba(201,168,76,0.5);}
+.admin-card-icon{font-size:1.5rem;margin-bottom:10px;}
+.admin-card-title{font-family:var(--serif);font-size:1.1rem;font-weight:300;color:var(--white);margin-bottom:4px;}
+.admin-card-desc{font-size:10px;color:var(--grey);line-height:1.6;}
+
+/* ── KIT COMPLET ── */
+.kit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.kit-card{background:var(--d2);border:1px solid var(--gold-border);padding:20px;cursor:pointer;transition:var(--trans);}
+.kit-card:hover{border-color:rgba(201,168,76,0.5);background:var(--d3);}
+.kit-card-icon{font-size:1.2rem;color:var(--gold);margin-bottom:10px;}
+.kit-card-title{font-size:11px;font-weight:500;color:var(--white);margin-bottom:4px;}
+.kit-card-desc{font-size:10px;color:var(--grey);line-height:1.6;}
+.kit-card-type{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-top:8px;}
+
+/* ── STACK OUTILS ── */
+.stack-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.stack-link{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--d2);border:1px solid var(--gold-border);text-decoration:none;transition:var(--trans);cursor:pointer;}
+.stack-link:hover{border-color:rgba(201,168,76,0.5);background:var(--d3);}
+.stack-link-icon{font-size:1.4rem;flex-shrink:0;}
+.stack-link-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.stack-link-desc{font-size:10px;color:var(--grey);margin-top:2px;}
+
+/* ── COMMS MODULE ── */
+.comms-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.comms-stat{background:var(--d2);border:1px solid var(--gold-border);padding:16px;}
+.comms-stat-num{font-family:var(--serif);font-size:2rem;color:var(--gold);line-height:1;}
+.comms-stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-top:4px;}
+
+/* ── NOTES TEXTAREA ── */
+.notes-area{width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--gold-border);color:var(--white);padding:14px;font-family:var(--sans);font-size:13px;line-height:1.7;outline:none;min-height:120px;resize:vertical;transition:var(--trans);}
+.notes-area:focus{border-color:var(--gold);}
+
+/* ── ALERT BOX ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:8px;font-size:11px;line-height:1.5;}
+.alert-warning{background:rgba(232,184,75,0.08);border-left:3px solid var(--warning);color:var(--warning);}
+.alert-success{background:rgba(76,175,125,0.08);border-left:3px solid var(--success);color:var(--success);}
+.alert-info{background:var(--gold-bg);border-left:3px solid var(--gold);color:var(--gold-l);}
+
+/* ── MODAL ── */
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
+#modal-bg.open{display:flex;}
+#modal{background:var(--d2);border:1px solid var(--gold-border);padding:28px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:fadeUp 0.3s ease;}
+#modal-title{font-family:var(--serif);font-size:1.5rem;font-weight:300;margin-bottom:20px;color:var(--white);}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--grey);font-size:1.1rem;cursor:pointer;}
+.modal-close:hover{color:var(--gold);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--gold-border);}
+
+/* ── DOC VIEWER ── */
+#doc-viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:1001;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
+#doc-viewer.open{display:flex;}
+.doc-inner{background:var(--d2);border:1px solid var(--gold-border);padding:28px;width:680px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative;}
+.doc-inner textarea{width:100%;height:380px;background:var(--d3);border:1px solid var(--gold-border);color:var(--white);padding:14px;font-family:monospace;font-size:12px;line-height:1.7;resize:vertical;outline:none;}
+.doc-inner textarea:focus{border-color:var(--gold);}
+
+/* ── PIPELINE ── */
+.pipeline-board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.pipeline-col{background:var(--d2);border:1px solid var(--gold-border);padding:14px;}
+.pipeline-col-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gold-border);}
+.pipeline-card{background:var(--d3);border:1px solid rgba(201,168,76,0.1);padding:10px;margin-bottom:8px;cursor:pointer;transition:var(--trans);}
+.pipeline-card:hover{border-color:var(--gold-border);}
+.pipeline-card-name{font-size:11px;font-weight:500;margin-bottom:2px;}
+.pipeline-card-type{font-size:10px;color:var(--grey);}
+.pipeline-card-val{font-size:10px;color:var(--gold);margin-top:4px;}
+
+/* ── RESPONSIVE ── */
+@media (max-width:768px){
+  :root{--sidebar-w:100vw;}
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main-content{margin-left:0;padding:16px;}
+  .topbar{display:flex;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .admin-grid{grid-template-columns:1fr 1fr;}
+  .kit-grid{grid-template-columns:1fr 1fr;}
+  .stack-grid{grid-template-columns:1fr;}
+  .form-row,.fg-row,.form-grid{grid-template-columns:1fr;}
+  .pipeline-board{grid-template-columns:1fr 1fr;}
+  .comms-grid{grid-template-columns:1fr;}
+  .page-title{font-size:1.6rem;}
+  table{font-size:11px;}
+  th,td{padding:7px 8px;}
+  .btn{padding:7px 12px;}
+}
+@media (max-width:480px){
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .admin-grid{grid-template-columns:1fr;}
+  .kit-grid{grid-template-columns:1fr;}
+  .pipeline-board{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+
+<!-- ══ LOCK SCREEN ══ -->
+<div id="lock-screen" style="position:fixed;inset:0;background:#080808;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;">
+  <div style="text-align:center;max-width:360px;width:100%;padding:0 24px;">
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:3rem;font-weight:300;color:#faf8f3;margin-bottom:4px;">TPA<span style="color:#c9a84c;">·</span></div>
+    <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#666;margin-bottom:48px;">Logiciel de Gestion</div>
+
+    <div style="background:#111;border:1px solid rgba(201,168,76,0.2);padding:36px 32px;">
+      <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#c9a84c;margin-bottom:24px;">Code d'accès</div>
+      <input type="password" id="lock-input" maxlength="20"
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-bottom:2px solid #c9a84c;color:#faf8f3;padding:14px 16px;font-family:'Outfit',sans-serif;font-size:1.3rem;letter-spacing:0.3em;text-align:center;outline:none;margin-bottom:8px;"
+        placeholder="• • • • • • •"
+        onkeydown="if(event.key==='Enter') checkCode()">
+      <div id="lock-error" style="font-size:10px;color:#e05c5c;min-height:16px;margin-bottom:20px;letter-spacing:1px;"></div>
+      <button onclick="checkCode()"
+        style="width:100%;background:#c9a84c;border:none;color:#000;padding:14px;font-family:'Outfit',sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:600;cursor:pointer;transition:background 0.2s;"
+        onmouseover="this.style.background='#e2c278'" onmouseout="this.style.background='#c9a84c'">
+        Accéder
+      </button>
+    </div>
+
+    <div style="font-size:9px;color:#333;margin-top:24px;letter-spacing:1px;">The Perfect Agency · Event & Wedding</div>
+  </div>
+</div>
+
+<script>
+function checkCode() {
+  const input = document.getElementById('lock-input').value;
+  const err = document.getElementById('lock-error');
+  if(input === 'TPA2905') {
+    document.getElementById('lock-screen').style.display = 'none';
+    try { localStorage.setItem('tpa_auth', '1'); } catch(e){}
+  } else {
+    err.textContent = 'Code incorrect — réessayez';
+    document.getElementById('lock-input').value = '';
+    document.getElementById('lock-input').focus();
+    setTimeout(()=>{ err.textContent=''; }, 2500);
+  }
+}
+
+// Auto-unlock if already authenticated
+(function(){
+  try {
+    if(localStorage.getItem('tpa_auth')==='1') {
+      document.getElementById('lock-screen').style.display='none';
+    }
+  } catch(e){}
+  // Focus input
+  setTimeout(()=>{ const el=document.getElementById('lock-input'); if(el) el.focus(); }, 100);
+})();
+</script>
+
+
+<!-- TOPBAR MOBILE -->
+<div class="topbar" id="topbar">
+  <div class="topbar-logo">TPA<span>·</span></div>
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+</div>
+
+<div class="app-layout">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">TPA<span>·</span></div>
+    <div class="sb-tagline">Logiciel de Gestion</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-lbl">Vue Globale</div>
+    <div class="nav-item active" onclick="showPanel('p-home')"><span class="nav-icon">◈</span> Dashboard</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-lbl">Administration</div>
+    <div class="nav-item" onclick="showPanel('p-clients')"><span class="nav-icon">◇</span> Clients <span class="nav-badge" id="badge-clients">0</span></div>
+    <div class="nav-item" onclick="showPanel('p-evenements')"><span class="nav-icon">◉</span> Événements <span class="nav-badge" id="badge-events">0</span></div>
+    <div class="nav-item" onclick="showPanel('p-devis')"><span class="nav-icon">✦</span> Devis & Factures</div>
+    <div class="nav-item" onclick="showPanel('p-finance')"><span class="nav-icon">◐</span> Finances</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-lbl">Équipe & Opérations</div>
+    <div class="nav-item" onclick="showPanel('p-equipe')"><span class="nav-icon">◑</span> Équipe TPA</div>
+    <div class="nav-item" onclick="showPanel('p-stock')"><span class="nav-icon">▣</span> Stock & Matériel</div>
+    <div class="nav-item" onclick="showPanel('p-agenda')"><span class="nav-icon">▷</span> Agenda</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-lbl">Commercial</div>
+    <div class="nav-item" onclick="showPanel('p-pipeline')"><span class="nav-icon">◈</span> Pipeline Prospects</div>
+    <div class="nav-item" onclick="showPanel('p-comms')"><span class="nav-icon">◇</span> Communication</div>
+    <div class="nav-item" onclick="showPanel('p-salon')"><span class="nav-icon">◉</span> Salon du Mariage</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-lbl">Ressources</div>
+    <div class="nav-item" onclick="showPanel('p-kit')"><span class="nav-icon">✦</span> Kit & Documents</div>
+    <div class="nav-item" onclick="showPanel('p-stack')"><span class="nav-icon">◐</span> Stack & Outils</div>
+    <div class="nav-item" onclick="showPanel('p-notes')"><span class="nav-icon">◑</span> Notes rapides</div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-info">
+      <strong>The Perfect Agency</strong><br>
+      06 65 16 23 86<br>
+      @theperfectagency
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main-content">
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : DASHBOARD HOME -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel active" id="p-home">
+  <div class="page-title">Bonjour, <em>Roxana</em></div>
+  <div class="page-sub" id="home-date"></div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val" id="kpi-clients">0</div><div class="kpi-lbl">Clients actifs</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-events">0</div><div class="kpi-lbl">Événements</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-ca">0€</div><div class="kpi-lbl">CA devis signés</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-devis">0</div><div class="kpi-lbl">Devis en cours</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Prochains événements</div>
+      <div class="card-body" id="home-next-events" style="font-size:12px;color:var(--grey);">Aucun événement enregistré.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Alertes & Rappels</div>
+      <div class="card-body" id="home-alerts" style="font-size:12px;color:var(--grey);">Tout est en ordre.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Accès rapides</div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <button class="btn btn-ghost" style="justify-content:center;" onclick="showPanel('p-clients')">+ Client</button>
+        <button class="btn btn-ghost" style="justify-content:center;" onclick="showPanel('p-evenements')">+ Événement</button>
+        <button class="btn btn-ghost" style="justify-content:center;" onclick="showPanel('p-devis')">+ Devis</button>
+        <button class="btn btn-ghost" style="justify-content:center;" onclick="showPanel('p-stock')">+ Stock</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : CLIENTS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-clients">
+  <div class="page-title">Base <em>Clients</em></div>
+  <div class="page-sub">Gestion de tous tes contacts clients</div>
+  <div class="toolbar">
+    <div class="search-bar" style="flex:1"><span style="color:var(--gold)">⌕</span><input type="text" placeholder="Rechercher un client..." oninput="filterClients(this.value)"></div>
+    <button class="btn btn-gold" onclick="openModal('client')">+ Nouveau client</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+    <table id="clientTable">
+      <thead><tr><th>Client</th><th>Type</th><th>Date</th><th>Budget</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="clientBody"><tr><td colspan="6" style="text-align:center;color:var(--grey);padding:30px;">Aucun client. Cliquez sur + Nouveau client.</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : ÉVÉNEMENTS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-evenements">
+  <div class="page-title">Mes <em>Événements</em></div>
+  <div class="page-sub">Suivi complet de chaque prestation</div>
+  <div class="toolbar">
+    <div class="search-bar" style="flex:1"><span style="color:var(--gold)">⌕</span><input type="text" placeholder="Rechercher..." oninput="filterEvents(this.value)"></div>
+    <select class="fg" style="margin:0;background:var(--d2);border:1px solid var(--gold-border);color:var(--white);padding:9px 12px;font-size:12px;outline:none;" onchange="filterEventsByType(this.value)">
+      <option value="">Tous les types</option>
+      <option>Mariage</option><option>Gala</option><option>Corporate</option><option>Soirée privée</option>
+    </select>
+    <button class="btn btn-gold" onclick="openModal('event')">+ Nouvel événement</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+    <table id="eventTable">
+      <thead><tr><th>Événement</th><th>Client</th><th>Date</th><th>Lieu</th><th>Dept.</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="eventBody"><tr><td colspan="7" style="text-align:center;color:var(--grey);padding:30px;">Aucun événement enregistré.</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : DEVIS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-devis">
+  <div class="page-title">Devis & <em>Factures</em></div>
+  <div class="page-sub">Génère et suis tous tes documents commerciaux</div>
+  <div class="toolbar">
+    <div class="search-bar" style="flex:1"><span style="color:var(--gold)">⌕</span><input type="text" placeholder="Rechercher..." oninput="filterDevis(this.value)"></div>
+    <button class="btn btn-gold" onclick="openModal('devis')">+ Nouveau devis</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+    <table id="devisTable">
+      <thead><tr><th>Réf.</th><th>Client</th><th>Prestation</th><th>Montant</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="devisBody"><tr><td colspan="7" style="text-align:center;color:var(--grey);padding:30px;">Aucun devis créé.</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : FINANCES -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-finance">
+  <div class="page-title">Plan <em>Financier</em></div>
+  <div class="page-sub">Suivi CA, dépenses et objectifs 2026</div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val" id="fin-ca">0€</div><div class="kpi-lbl">CA Total</div></div>
+    <div class="kpi"><div class="kpi-val" id="fin-depenses">0€</div><div class="kpi-lbl">Dépenses</div></div>
+    <div class="kpi"><div class="kpi-val" id="fin-marge">0€</div><div class="kpi-lbl">Marge nette</div></div>
+    <div class="kpi"><div class="kpi-val" id="fin-obj">—</div><div class="kpi-lbl">Obj. 2026</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card">
+      <div class="card-title">Ajouter une entrée</div>
+      <div class="card-body">
+        <div class="fg-row">
+          <div class="fg"><label>Type</label>
+            <select id="fin-type"><option value="revenu">Revenu</option><option value="depense">Dépense</option></select>
+          </div>
+          <div class="fg"><label>Montant (€)</label><input type="number" id="fin-montant" placeholder="0"></div>
+        </div>
+        <div class="fg"><label>Description</label><input type="text" id="fin-desc" placeholder="Nature de l'opération..."></div>
+        <div class="fg"><label>Date</label><input type="date" id="fin-date"></div>
+        <button class="btn btn-gold" onclick="addFinance()" style="width:100%;justify-content:center;">Enregistrer</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Historique</div>
+      <div class="card-body" style="padding:0">
+        <div id="finHistory" style="max-height:280px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : ÉQUIPE -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-equipe">
+  <div class="page-title">La <em>Maison TPA</em></div>
+  <div class="page-sub">Gestion de l'équipe et des rôles</div>
+  <div class="toolbar">
+    <button class="btn btn-gold" onclick="openModal('membre')">+ Ajouter un membre</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+    <table id="equipeTable">
+      <thead><tr><th>Membre</th><th>Rôle</th><th>Grade</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="equipeBody"></tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">Standards de l'équipe TPA</div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;color:var(--grey);">
+        <div style="padding:12px;background:var(--d3);border-left:2px solid var(--gold);">Tenue : Veste noire · Logo PA brodé or</div>
+        <div style="padding:12px;background:var(--d3);border-left:2px solid var(--gold);">Ponctualité : Arrivée 1h avant le client</div>
+        <div style="padding:12px;background:var(--d3);border-left:2px solid var(--gold);">Communication : Walkie-talkie ou WhatsApp groupe</div>
+        <div style="padding:12px;background:var(--d3);border-left:2px solid var(--gold);">Attitude : Discrétion · Excellence · Sourire</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : STOCK -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-stock">
+  <div class="page-title">Stock & <em>Matériel</em></div>
+  <div class="page-sub">Suivi du matériel et alertes de réapprovisionnement</div>
+  <div class="toolbar">
+    <button class="btn btn-gold" onclick="openModal('stock')">+ Ajouter un article</button>
+  </div>
+  <div id="stock-alerts" style="margin-bottom:12px;"></div>
+  <div class="card" style="padding:0">
+    <div class="table-wrap">
+    <table id="stockTable">
+      <thead><tr><th>Article</th><th>Catégorie</th><th>Qté</th><th>Seuil alerte</th><th>État</th><th>Actions</th></tr></thead>
+      <tbody id="stockBody"><tr><td colspan="6" style="text-align:center;color:var(--grey);padding:30px;">Aucun article enregistré.</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : AGENDA -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-agenda">
+  <div class="page-title">Agenda <em>Palace</em></div>
+  <div class="page-sub">Vue calendrier de toutes tes prestations</div>
+  <div class="card">
+    <div class="card-title" id="cal-title"></div>
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">◀ Précédent</button>
+        <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">Suivant ▶</button>
+      </div>
+      <div id="calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Événements du mois</div>
+    <div class="card-body" id="month-events" style="font-size:12px;color:var(--grey);">Aucun événement ce mois-ci.</div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : PIPELINE PROSPECTS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-pipeline">
+  <div class="page-title">Pipeline <em>Prospects</em></div>
+  <div class="page-sub">Suivi de tes leads et conversions</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi"><div class="kpi-val" id="pip-total">0</div><div class="kpi-lbl">Total prospects</div></div>
+    <div class="kpi"><div class="kpi-val" id="pip-contact">0</div><div class="kpi-lbl">Premier contact</div></div>
+    <div class="kpi"><div class="kpi-val" id="pip-devis">0</div><div class="kpi-lbl">Devis envoyés</div></div>
+    <div class="kpi"><div class="kpi-val" id="pip-signe">0</div><div class="kpi-lbl">Signés</div></div>
+  </div>
+  <div class="toolbar"><button class="btn btn-gold" onclick="openModal('prospect')">+ Nouveau prospect</button></div>
+  <div class="pipeline-board">
+    <div class="pipeline-col">
+      <div class="pipeline-col-title">Premier contact</div>
+      <div id="col-contact"></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-col-title">Devis envoyé</div>
+      <div id="col-devis-sent"></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-col-title">Négociation</div>
+      <div id="col-nego"></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-col-title">Signé ✓</div>
+      <div id="col-signe"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : COMMUNICATION -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-comms">
+  <div class="page-title">Communication <em>& Marketing</em></div>
+  <div class="page-sub">Suivi de ta présence digitale et tes actions marketing</div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+    <div class="kpi"><div class="kpi-val" id="comm-insta">0</div><div class="kpi-lbl">Abonnés Instagram</div></div>
+    <div class="kpi"><div class="kpi-val" id="comm-tiktok">0</div><div class="kpi-lbl">Abonnés TikTok</div></div>
+    <div class="kpi"><div class="kpi-val" id="comm-google">0</div><div class="kpi-lbl">Avis Google</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card">
+      <div class="card-title">Mettre à jour les stats</div>
+      <div class="card-body">
+        <div class="fg"><label>Abonnés Instagram</label><input type="number" id="inp-insta" placeholder="0" oninput="updateCommsStats()"></div>
+        <div class="fg"><label>Abonnés TikTok</label><input type="number" id="inp-tiktok" placeholder="0" oninput="updateCommsStats()"></div>
+        <div class="fg"><label>Avis Google ⭐</label><input type="number" id="inp-google" placeholder="0" oninput="updateCommsStats()"></div>
+        <button class="btn btn-gold" onclick="saveCommsStats()" style="width:100%;justify-content:center;">Sauvegarder</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Liens directs</div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+        <a href="https://instagram.com/theperfectagency" target="_blank" class="stack-link"><span class="stack-link-icon">📷</span><div><div class="stack-link-name">Instagram</div><div class="stack-link-desc">@theperfectagency</div></div></a>
+        <a href="https://tiktok.com/@theperfectagencyevent" target="_blank" class="stack-link"><span class="stack-link-icon">🎵</span><div><div class="stack-link-name">TikTok</div><div class="stack-link-desc">@theperfectagencyevent</div></div></a>
+        <a href="https://business.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">🌐</span><div><div class="stack-link-name">Google My Business</div><div class="stack-link-desc">Gérer ta fiche établissement</div></div></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Checklist contenu — semaine en cours</div>
+    <div class="card-body" id="comms-checklist"></div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : SALON DU MARIAGE -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-salon">
+  <div class="page-title">Salon du <em>Mariage TPA</em></div>
+  <div class="page-sub">Organisation, exposants, budget et planning</div>
+
+  <div class="card">
+    <div class="card-title">Informations du Salon</div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="fg"><label>Date du salon</label><input type="date" id="salon-date" onchange="saveSalon()"></div>
+        <div class="fg"><label>Lieu</label><input type="text" id="salon-lieu" placeholder="Salle Pleyel, Paris..." onchange="saveSalon()"></div>
+        <div class="fg"><label>Objectif exposants</label><input type="number" id="salon-obj" placeholder="25" onchange="saveSalon()"></div>
+        <div class="fg"><label>Budget prévisionnel (€)</label><input type="number" id="salon-budget" placeholder="7000" onchange="saveSalon()"></div>
+      </div>
+      <div class="fg"><label>Notes importantes</label><textarea class="notes-area" id="salon-notes" placeholder="Notes, contacts, à faire..." onchange="saveSalon()" style="min-height:70px;"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Exposants <span id="expo-count-lbl" style="color:var(--grey);font-weight:normal;font-size:10px;"></span></div>
+    <div class="card-body" style="padding-bottom:12px;">
+      <div class="toolbar"><button class="btn btn-gold" onclick="openModal('exposant')">+ Ajouter exposant</button></div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Exposant</th><th>Métier</th><th>Stand</th><th>Tarif</th><th>Statut</th><th>Paiement</th><th>Actions</th></tr></thead>
+        <tbody id="salon-expo-body"><tr><td colspan="7" style="text-align:center;color:var(--grey);padding:20px;">Aucun exposant.</td></tr></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card">
+      <div class="card-title">Budget Salon</div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--grey)">Revenus stands</span><span style="color:var(--gold)" id="salon-rev">0 €</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--grey)">Charges prévisionnelles</span><input type="number" id="salon-charges" placeholder="0" style="width:100px;background:transparent;border:none;border-bottom:1px solid var(--gold-border);color:var(--white);text-align:right;outline:none;font-size:12px;" onchange="saveSalon()"><span style="color:var(--grey);margin-left:4px;">€</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;padding-top:8px;border-top:1px solid var(--gold-border);"><span>Résultat net</span><span id="salon-result" style="color:var(--success)">0 €</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Compte à rebours</div>
+      <div class="card-body" style="text-align:center;">
+        <div style="font-family:var(--serif);font-size:3.5rem;color:var(--gold);line-height:1;" id="salon-countdown">—</div>
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-top:6px;">jours avant le salon</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : KIT & DOCUMENTS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-kit">
+  <div class="page-title">Kit & <em>Documents</em></div>
+  <div class="page-sub">Modèles, contrats, scripts et ressources TPA</div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Documents Commerciaux</div>
+    <div class="card-body">
+      <div class="kit-grid">
+        <div class="kit-card" onclick="openDoc('devis')"><div class="kit-card-icon">📄</div><div class="kit-card-title">Devis standard</div><div class="kit-card-desc">Modèle devis complet avec acompte, conditions et tarifs TPA</div><div class="kit-card-type">Éditable · Téléchargeable</div></div>
+        <div class="kit-card" onclick="openDoc('contrat')"><div class="kit-card-icon">📋</div><div class="kit-card-title">Contrat de prestation</div><div class="kit-card-desc">Contrat standard pour toutes prestations TPA — clauses incluses</div><div class="kit-card-type">Éditable · Téléchargeable</div></div>
+        <div class="kit-card" onclick="openDoc('facture')"><div class="kit-card-icon">🧾</div><div class="kit-card-title">Facture standard</div><div class="kit-card-desc">Modèle facture avec calcul acompte / solde et mentions légales</div><div class="kit-card-type">Éditable · Téléchargeable</div></div>
+        <div class="kit-card" onclick="openDoc('relance')"><div class="kit-card-icon">✉️</div><div class="kit-card-title">Email de relance</div><div class="kit-card-desc">Script de relance client après devis envoyé sans réponse</div><div class="kit-card-type">Éditable · Copier</div></div>
+        <div class="kit-card" onclick="openDoc('welcome')"><div class="kit-card-icon">🎁</div><div class="kit-card-title">Kit bienvenue client</div><div class="kit-card-desc">Message de bienvenue après signature — onboarding TPA</div><div class="kit-card-type">Éditable · Copier</div></div>
+        <div class="kit-card" onclick="openDoc('brief')"><div class="kit-card-icon">📝</div><div class="kit-card-title">Brief événement</div><div class="kit-card-desc">Formulaire de brief complet à remplir avec le client</div><div class="kit-card-type">Éditable · Téléchargeable</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Scripts & Communication</div>
+    <div class="card-body">
+      <div class="kit-grid">
+        <div class="kit-card" onclick="openDoc('script-dm')"><div class="kit-card-icon">💬</div><div class="kit-card-title">Script DM Instagram</div><div class="kit-card-desc">Message type pour répondre aux demandes en DM</div><div class="kit-card-type">Copier · Adapter</div></div>
+        <div class="kit-card" onclick="openDoc('script-presta')"><div class="kit-card-icon">🤝</div><div class="kit-card-title">Démarchage prestataire</div><div class="kit-card-desc">Script email/DM pour démarcher un prestataire réseau</div><div class="kit-card-type">Copier · Adapter</div></div>
+        <div class="kit-card" onclick="openDoc('script-salon')"><div class="kit-card-icon">🎪</div><div class="kit-card-title">Invitation exposant salon</div><div class="kit-card-desc">Email d'invitation pour le Salon du Mariage TPA</div><div class="kit-card-type">Copier · Adapter</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Standards & Protocoles</div>
+    <div class="card-body">
+      <div class="kit-grid">
+        <div class="kit-card" onclick="openDoc('standards')"><div class="kit-card-icon">⭐</div><div class="kit-card-title">Standards TPA</div><div class="kit-card-desc">Charte d'excellence : tenue, attitude, protocole service</div><div class="kit-card-type">Référence interne</div></div>
+        <div class="kit-card" onclick="openDoc('integration')"><div class="kit-card-icon">🎓</div><div class="kit-card-title">Guide d'intégration</div><div class="kit-card-desc">Parcours d'intégration nouveau membre équipe TPA</div><div class="kit-card-type">Référence interne</div></div>
+        <div class="kit-card" onclick="openDoc('evaluation')"><div class="kit-card-icon">📊</div><div class="kit-card-title">Grille d'évaluation</div><div class="kit-card-desc">Évaluation post-prestation des membres de l'équipe</div><div class="kit-card-type">Référence interne</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : STACK & OUTILS -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-stack">
+  <div class="page-title">Stack & <em>Outils</em></div>
+  <div class="page-sub">Accès direct à tous tes outils externes</div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Réseaux sociaux & Communication</div>
+    <div class="card-body">
+      <div class="stack-grid">
+        <a href="https://instagram.com/theperfectagency" target="_blank" class="stack-link"><span class="stack-link-icon">📷</span><div><div class="stack-link-name">Instagram</div><div class="stack-link-desc">@theperfectagency · Gérer le compte</div></div></a>
+        <a href="https://tiktok.com/@theperfectagencyevent" target="_blank" class="stack-link"><span class="stack-link-icon">🎵</span><div><div class="stack-link-name">TikTok</div><div class="stack-link-desc">@theperfectagencyevent</div></div></a>
+        <a href="https://wa.me/33665162386" target="_blank" class="stack-link"><span class="stack-link-icon">💬</span><div><div class="stack-link-name">WhatsApp</div><div class="stack-link-desc">06 65 16 23 86 · Messagerie clients</div></div></a>
+        <a href="mailto:theperfecteventweddingagency@gmail.com" class="stack-link"><span class="stack-link-icon">✉️</span><div><div class="stack-link-name">Email</div><div class="stack-link-desc">theperfecteventwedding...@gmail.com</div></div></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Google Suite</div>
+    <div class="card-body">
+      <div class="stack-grid">
+        <a href="https://drive.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">📁</span><div><div class="stack-link-name">Google Drive</div><div class="stack-link-desc">Documents, photos, archives TPA</div></div></a>
+        <a href="https://mail.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">📬</span><div><div class="stack-link-name">Gmail</div><div class="stack-link-desc">Boîte mail professionnelle</div></div></a>
+        <a href="https://calendar.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">📅</span><div><div class="stack-link-name">Google Agenda</div><div class="stack-link-desc">Synchronisation événements</div></div></a>
+        <a href="https://business.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">⭐</span><div><div class="stack-link-name">Google My Business</div><div class="stack-link-desc">Fiche établissement · Avis clients</div></div></a>
+        <a href="https://docs.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">📝</span><div><div class="stack-link-name">Google Docs</div><div class="stack-link-desc">Rédaction et édition documents</div></div></a>
+        <a href="https://sheets.google.com" target="_blank" class="stack-link"><span class="stack-link-icon">📊</span><div><div class="stack-link-name">Google Sheets</div><div class="stack-link-desc">Tableaux et budgets</div></div></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Site Web & Gestion</div>
+    <div class="card-body">
+      <div class="stack-grid">
+        <a href="https://theperfectagency.github.io/maisontpa-gestion" target="_blank" class="stack-link"><span class="stack-link-icon">🌐</span><div><div class="stack-link-name">Site Web TPA</div><div class="stack-link-desc">Voir le site en ligne</div></div></a>
+        <a href="https://github.com/theperfectagency" target="_blank" class="stack-link"><span class="stack-link-icon">⚙️</span><div><div class="stack-link-name">GitHub</div><div class="stack-link-desc">Mettre à jour le site</div></div></a>
+        <a href="https://formspree.io" target="_blank" class="stack-link"><span class="stack-link-icon">📨</span><div><div class="stack-link-name">Formspree</div><div class="stack-link-desc">Voir les demandes de devis reçues</div></div></a>
+        <a href="https://canva.com" target="_blank" class="stack-link"><span class="stack-link-icon">🎨</span><div><div class="stack-link-name">Canva</div><div class="stack-link-desc">Créer visuels et supports</div></div></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<!-- PANEL : NOTES RAPIDES -->
+<!-- ─────────────────────────────────────────── -->
+<div class="panel" id="p-notes">
+  <div class="page-title">Notes <em>Rapides</em></div>
+  <div class="page-sub">Tes mémos, idées et rappels — sauvegardés automatiquement</div>
+  <div class="card">
+    <div class="card-title">Note du jour</div>
+    <div class="card-body">
+      <textarea class="notes-area" id="notes-main" placeholder="Écris ici tes notes, idées, rappels... Tout est sauvegardé automatiquement." oninput="saveNotes()" style="min-height:200px;"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Notes archivées</div>
+    <div class="card-body">
+      <div class="toolbar"><button class="btn btn-gold btn-sm" onclick="archiveNote()">Archiver la note actuelle</button><button class="btn btn-ghost btn-sm" onclick="clearNotes()">Effacer</button></div>
+      <div id="notes-archive" style="font-size:12px;color:var(--grey);margin-top:12px;">Aucune note archivée.</div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ══ MODAL SYSTEM ══ -->
+<div id="modal-bg">
+  <div id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-title"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ══ DOC VIEWER ══ -->
+<div id="doc-viewer">
+  <div class="doc-inner">
+    <button class="modal-close" onclick="closeViewer()">✕</button>
+    <div id="doc-viewer-title" style="font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;"></div>
+    <textarea id="doc-content"></textarea>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn btn-ghost btn-sm" onclick="copyDoc()">Copier</button>
+      <button class="btn btn-gold btn-sm" onclick="downloadDoc()">Télécharger .txt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE & PERSISTENCE
+// ══════════════════════════════════════════════
+const DB = {
+  save: (k,v) => { try{ localStorage.setItem('tpa_'+k, JSON.stringify(v)); }catch(e){} },
+  load: (k,d) => { try{ const v=localStorage.getItem('tpa_'+k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+};
+
+const STATE = {
+  clients:   DB.load('clients', []),
+  events:    DB.load('events', []),
+  devis:     DB.load('devis', []),
+  prospects: DB.load('prospects', []),
+  finances:  DB.load('finances', []),
+  stock:     DB.load('stock', []),
+  comms:     DB.load('comms', {insta:0,tiktok:0,google:0}),
+  salon:     DB.load('salon', {date:'',lieu:'',obj:25,budget:7000,notes:'',charges:4000,exposants:[]}),
+  notes:     DB.load('notes', {main:'',archive:[]}),
+  equipe: DB.load('equipe', [
+    {id:1,nom:'Roxana Bikindou',role:'Directrice Générale & Fondatrice',grade:'Direction',tel:'06 65 16 23 86',statut:'actif'},
+    {id:2,nom:'[Frère]',role:'Maître d\'Hôtel · Direction du Service',grade:'Senior',tel:'—',statut:'actif'},
+    {id:3,nom:'[Sœur]',role:'Responsable Équipe Service',grade:'Senior',tel:'—',statut:'actif'},
+  ]),
+  devisCounter: DB.load('devisCounter', 1),
+};
+
+function persist(key) { DB.save(key, STATE[key]); }
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const panel = document.getElementById(id);
+  if(panel) panel.classList.add('active');
+  document.querySelectorAll(`.nav-item`).forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active');
+  });
+  // Close sidebar on mobile
+  if(window.innerWidth <= 768) closeSidebar();
+  // Refresh panel
+  if(id==='p-home') updateHome();
+  if(id==='p-agenda') renderCalendar();
+  if(id==='p-pipeline') renderPipeline();
+  if(id==='p-comms') loadCommsStats();
+  if(id==='p-salon') loadSalon();
+  if(id==='p-notes') loadNotes();
+  if(id==='p-stock') renderStock();
+  if(id==='p-equipe') renderEquipe();
+  if(id==='p-finance') renderFinances();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════
+// MODAL SYSTEM
+// ══════════════════════════════════════════════
+let editingId = null;
+let editingType = null;
+
+function openModal(type, id=null) {
+  editingType = type;
+  editingId = id;
+  const bg = document.getElementById('modal-bg');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  bg.classList.add('open');
+
+  const forms = {
+    client: {
+      t: id ? 'Modifier le client' : 'Nouveau client',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Prénom & Nom</label><input class="form-input" id="f-nom" placeholder="Marie Dupont"></div>
+          <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input" id="f-tel" placeholder="06 XX XX XX XX"></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="f-email" placeholder="email@exemple.fr"></div>
+          <div class="form-group"><label class="form-label">Type d'événement</label>
+            <select class="form-select" id="f-type"><option>Mariage</option><option>Gala</option><option>Corporate</option><option>Soirée privée</option><option>Autre</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Date prévue</label><input class="form-input" type="date" id="f-date"></div>
+          <div class="form-group"><label class="form-label">Budget estimé (€)</label><input class="form-input" type="number" id="f-budget" placeholder="5000"></div>
+          <div class="form-group"><label class="form-label">Statut</label>
+            <select class="form-select" id="f-statut"><option>Prospect</option><option>Confirmé</option><option>En cours</option><option>Terminé</option><option>Annulé</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Source</label>
+            <select class="form-select" id="f-source"><option>Instagram</option><option>WhatsApp</option><option>Bouche à oreille</option><option>Site web</option><option>Salon</option><option>Autre</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Infos complémentaires..."></textarea></div>
+        </div>`
+    },
+    event: {
+      t: id ? 'Modifier l\'événement' : 'Nouvel événement',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Nom de l'événement</label><input class="form-input" id="f-nom" placeholder="Mariage Dupont - Martin"></div>
+          <div class="form-group"><label class="form-label">Client</label><input class="form-input" id="f-client" placeholder="Nom du client"></div>
+          <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="f-date"></div>
+          <div class="form-group"><label class="form-label">Lieu</label><input class="form-input" id="f-lieu" placeholder="Château de Versailles..."></div>
+          <div class="form-group"><label class="form-label">Département TPA</label>
+            <select class="form-select" id="f-dept"><option>Event Executive Office</option><option>Private Partner Office</option><option>Guest Relations & Service</option><option>Multi-départements</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Nb invités</label><input class="form-input" type="number" id="f-invites" placeholder="100"></div>
+          <div class="form-group"><label class="form-label">Budget (€)</label><input class="form-input" type="number" id="f-budget" placeholder="0"></div>
+          <div class="form-group"><label class="form-label">Statut</label>
+            <select class="form-select" id="f-statut"><option>Planifié</option><option>En cours</option><option>Terminé</option><option>Annulé</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Détails, prestataires, remarques..."></textarea></div>
+        </div>`
+    },
+    devis: {
+      t: id ? 'Modifier le devis' : 'Nouveau devis',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Client</label><input class="form-input" id="f-client" placeholder="Nom du client"></div>
+          <div class="form-group"><label class="form-label">Prestation</label><input class="form-input" id="f-prestation" placeholder="Mariage complet..."></div>
+          <div class="form-group"><label class="form-label">Montant HT (€)</label><input class="form-input" type="number" id="f-montant" placeholder="0"></div>
+          <div class="form-group"><label class="form-label">Statut</label>
+            <select class="form-select" id="f-statut"><option>En attente</option><option>Envoyé</option><option>Signé</option><option>Refusé</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Date d'envoi</label><input class="form-input" type="date" id="f-date"></div>
+          <div class="form-group"><label class="form-label">Acompte reçu (€)</label><input class="form-input" type="number" id="f-acompte" placeholder="0"></div>
+          <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Détails de la prestation..."></textarea></div>
+        </div>`
+    },
+    membre: {
+      t: id ? 'Modifier le membre' : 'Nouveau membre équipe',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Nom complet</label><input class="form-input" id="f-nom" placeholder="Prénom Nom"></div>
+          <div class="form-group"><label class="form-label">Rôle</label><input class="form-input" id="f-role" placeholder="Maître d'hôtel..."></div>
+          <div class="form-group"><label class="form-label">Grade</label>
+            <select class="form-select" id="f-grade"><option>Direction</option><option>Senior</option><option>Chef</option><option>Confirmé</option><option>Junior</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input" id="f-tel" placeholder="06 XX XX XX XX"></div>
+          <div class="form-group"><label class="form-label">Statut</label>
+            <select class="form-select" id="f-statut"><option value="actif">Actif</option><option value="inactif">Inactif</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="f-email" placeholder="email@..."></div>
+        </div>`
+    },
+    stock: {
+      t: id ? 'Modifier l\'article' : 'Nouvel article stock',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Article</label><input class="form-input" id="f-nom" placeholder="Nom de l'article"></div>
+          <div class="form-group"><label class="form-label">Catégorie</label>
+            <select class="form-select" id="f-cat"><option>Décoration</option><option>Service</option><option>Bar</option><option>Signalétique</option><option>Matériel</option><option>Autre</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Quantité</label><input class="form-input" type="number" id="f-qte" placeholder="0"></div>
+          <div class="form-group"><label class="form-label">Seuil d'alerte</label><input class="form-input" type="number" id="f-seuil" placeholder="2"></div>
+          <div class="form-group"><label class="form-label">État</label>
+            <select class="form-select" id="f-etat"><option>Bon état</option><option>Usé</option><option>À remplacer</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="f-notes" placeholder="Emplacement, fournisseur..."></div>
+        </div>`
+    },
+    exposant: {
+      t: id ? 'Modifier l\'exposant' : 'Nouvel exposant salon',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Nom / Entreprise</label><input class="form-input" id="f-nom" placeholder="Nom de l'entreprise"></div>
+          <div class="form-group"><label class="form-label">Métier</label><input class="form-input" id="f-metier" placeholder="Photographe, Traiteur..."></div>
+          <div class="form-group"><label class="form-label">Contact</label><input class="form-input" id="f-contact" placeholder="Prénom Nom"></div>
+          <div class="form-group"><label class="form-label">Téléphone / Email</label><input class="form-input" id="f-tel" placeholder="06 XX XX XX XX"></div>
+          <div class="form-group"><label class="form-label">Formule stand</label>
+            <select class="form-select" id="f-stand" onchange="autoTarif()">
+              <option value="Découverte">Découverte — 4m² — 250€</option>
+              <option value="Essentiel">Essentiel — 6m² — 400€</option>
+              <option value="Prestige">Prestige — 9m² — 650€</option>
+              <option value="Sponsor Or">Sponsor Or — 12m² — 1200€</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Tarif (€)</label><input class="form-input" type="number" id="f-tarif" value="250"></div>
+          <div class="form-group"><label class="form-label">Statut</label>
+            <select class="form-select" id="f-statut"><option>En attente</option><option>Confirmé</option><option>Annulé</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Paiement reçu (€)</label><input class="form-input" type="number" id="f-paiement" value="0"></div>
+        </div>`
+    },
+    prospect: {
+      t: id ? 'Modifier le prospect' : 'Nouveau prospect',
+      fields: `
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Nom</label><input class="form-input" id="f-nom" placeholder="Prénom Nom"></div>
+          <div class="form-group"><label class="form-label">Type événement</label><input class="form-input" id="f-type" placeholder="Mariage, Gala..."></div>
+          <div class="form-group"><label class="form-label">Budget estimé (€)</label><input class="form-input" type="number" id="f-budget" placeholder="0"></div>
+          <div class="form-group"><label class="form-label">Étape</label>
+            <select class="form-select" id="f-etape"><option value="contact">Premier contact</option><option value="devis-sent">Devis envoyé</option><option value="nego">Négociation</option><option value="signe">Signé</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Source</label>
+            <select class="form-select" id="f-source"><option>Instagram</option><option>WhatsApp</option><option>Bouche à oreille</option><option>Site web</option><option>Salon</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Contact</label><input class="form-input" id="f-contact" placeholder="06 XX / email..."></div>
+        </div>`
+    }
+  };
+
+  const form = forms[type];
+  if(!form) return;
+  title.textContent = form.t;
+  body.innerHTML = form.fields + `<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-gold" onclick="saveItem()">Enregistrer</button></div>`;
+
+  // Pre-fill if editing
+  if(id !== null) prefillModal(type, id);
+}
+
+function prefillModal(type, id) {
+  const maps = { client:'clients', event:'events', devis:'devis', membre:'equipe', stock:'stock', prospect:'prospects' };
+  const key = maps[type];
+  let item;
+  if(type === 'exposant') item = STATE.salon.exposants.find(e=>e.id===id);
+  else if(key) item = STATE[key].find(i=>i.id===id);
+  if(!item) return;
+  Object.keys(item).forEach(k => {
+    const el = document.getElementById('f-'+k);
+    if(el) el.value = item[k];
+  });
+}
+
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); editingId=null; editingType=null; }
+
+function saveItem() {
+  const type = editingType;
+  const id = editingId;
+  const get = k => { const el=document.getElementById('f-'+k); return el?el.value:''; };
+
+  if(type==='client') {
+    const item = {id: id||Date.now(), nom:get('nom'), tel:get('tel'), email:get('email'), type:get('type'), date:get('date'), budget:parseFloat(get('budget'))||0, statut:get('statut'), source:get('source'), notes:get('notes')};
+    if(id) { const i=STATE.clients.findIndex(c=>c.id===id); if(i!==-1) STATE.clients[i]=item; }
+    else STATE.clients.push(item);
+    persist('clients'); closeModal(); renderClients();
+  }
+  else if(type==='event') {
+    const item = {id:id||Date.now(), nom:get('nom'), client:get('client'), date:get('date'), lieu:get('lieu'), dept:get('dept'), invites:get('invites'), budget:parseFloat(get('budget'))||0, statut:get('statut'), notes:get('notes')};
+    if(id) { const i=STATE.events.findIndex(e=>e.id===id); if(i!==-1) STATE.events[i]=item; }
+    else STATE.events.push(item);
+    persist('events'); closeModal(); renderEvents();
+  }
+  else if(type==='devis') {
+    const ref = 'TPA-'+new Date().getFullYear()+'-'+String(STATE.devisCounter).padStart(3,'0');
+    STATE.devisCounter++;
+    const item = {id:id||Date.now(), ref, client:get('client'), prestation:get('prestation'), montant:parseFloat(get('montant'))||0, statut:get('statut'), date:get('date'), acompte:parseFloat(get('acompte'))||0, notes:get('notes')};
+    if(id) { const i=STATE.devis.findIndex(d=>d.id===id); if(i!==-1) STATE.devis[i]=item; }
+    else STATE.devis.push(item);
+    persist('devis'); persist('devisCounter'); closeModal(); renderDevis();
+  }
+  else if(type==='membre') {
+    const item = {id:id||Date.now(), nom:get('nom'), role:get('role'), grade:get('grade'), tel:get('tel'), statut:get('statut'), email:get('email')};
+    if(id) { const i=STATE.equipe.findIndex(e=>e.id===id); if(i!==-1) STATE.equipe[i]=item; }
+    else STATE.equipe.push(item);
+    persist('equipe'); closeModal(); renderEquipe();
+  }
+  else if(type==='stock') {
+    const item = {id:id||Date.now(), nom:get('nom'), cat:get('cat'), qte:parseInt(get('qte'))||0, seuil:parseInt(get('seuil'))||2, etat:get('etat'), notes:get('notes')};
+    if(id) { const i=STATE.stock.findIndex(s=>s.id===id); if(i!==-1) STATE.stock[i]=item; }
+    else STATE.stock.push(item);
+    persist('stock'); closeModal(); renderStock();
+  }
+  else if(type==='exposant') {
+    const item = {id:id||Date.now(), nom:get('nom'), metier:get('metier'), contact:get('contact'), tel:get('tel'), stand:get('stand'), tarif:parseFloat(get('tarif'))||0, statut:get('statut'), paiement:parseFloat(get('paiement'))||0};
+    if(id) { const i=STATE.salon.exposants.findIndex(e=>e.id===id); if(i!==-1) STATE.salon.exposants[i]=item; }
+    else STATE.salon.exposants.push(item);
+    saveSalon(); closeModal(); renderExposants();
+  }
+  else if(type==='prospect') {
+    const item = {id:id||Date.now(), nom:get('nom'), type:get('type'), budget:parseFloat(get('budget'))||0, etape:get('etape'), source:get('source'), contact:get('contact')};
+    if(id) { const i=STATE.prospects.findIndex(p=>p.id===id); if(i!==-1) STATE.prospects[i]=item; }
+    else STATE.prospects.push(item);
+    persist('prospects'); closeModal(); renderPipeline();
+  }
+  updateHome();
+}
+
+function autoTarif() {
+  const map = {'Découverte':250,'Essentiel':400,'Prestige':650,'Sponsor Or':1200};
+  const s = document.getElementById('f-stand');
+  const t = document.getElementById('f-tarif');
+  if(s&&t) t.value = map[s.value]||250;
+}
+
+function deleteItem(type, id) {
+  if(!confirm('Supprimer cet élément ?')) return;
+  const maps = {client:'clients',event:'events',devis:'devis',membre:'equipe',stock:'stock',prospect:'prospects'};
+  const key = maps[type];
+  if(type==='exposant') { STATE.salon.exposants=STATE.salon.exposants.filter(e=>e.id!==id); saveSalon(); renderExposants(); }
+  else if(key) { STATE[key]=STATE[key].filter(i=>i.id!==id); persist(key); }
+  if(type==='client') renderClients();
+  else if(type==='event') renderEvents();
+  else if(type==='devis') renderDevis();
+  else if(type==='membre') renderEquipe();
+  else if(type==='stock') renderStock();
+  else if(type==='prospect') renderPipeline();
+  updateHome();
+}
+
+// ══════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ══════════════════════════════════════════════
+function statusBadge(s) {
+  const map = {
+    'Confirmé':'badge-success','Signé':'badge-success','Terminé':'badge-success','Bon état':'badge-success','actif':'badge-success',
+    'En attente':'badge-warning','En cours':'badge-warning','Planifié':'badge-warning','Prospect':'badge-warning','Envoyé':'badge-warning','Négociation':'badge-warning',
+    'Annulé':'badge-danger','Refusé':'badge-danger','À remplacer':'badge-danger','inactif':'badge-danger',
+    'Usé':'badge-gold'
+  };
+  return `<span class="badge ${map[s]||'badge-grey'}">${s}</span>`;
+}
+
+function renderClients() {
+  const tb = document.getElementById('clientBody');
+  if(!tb) return;
+  if(!STATE.clients.length) { tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--grey);padding:30px;">Aucun client. Cliquez sur + Nouveau client.</td></tr>'; updateBadge('clients',0); return; }
+  tb.innerHTML = STATE.clients.map(c=>`<tr>
+    <td><strong>${c.nom}</strong><br><span style="font-size:10px;color:var(--grey)">${c.source||''}</span></td>
+    <td>${c.type||'—'}</td>
+    <td style="font-size:11px">${c.date||'—'}</td>
+    <td style="color:var(--gold)">${c.budget?c.budget.toLocaleString('fr-FR')+'€':'—'}</td>
+    <td>${statusBadge(c.statut)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openModal('client',${c.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('client',${c.id})">✕</button></td>
+  </tr>`).join('');
+  updateBadge('clients', STATE.clients.filter(c=>c.statut!=='Terminé'&&c.statut!=='Annulé').length);
+}
+
+function filterClients(q) {
+  const rows = document.querySelectorAll('#clientBody tr');
+  rows.forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+}
+
+function renderEvents() {
+  const tb = document.getElementById('eventBody');
+  if(!tb) return;
+  if(!STATE.events.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--grey);padding:30px;">Aucun événement enregistré.</td></tr>'; updateBadge('events',0); return; }
+  tb.innerHTML = STATE.events.map(e=>`<tr>
+    <td><strong>${e.nom}</strong></td>
+    <td style="font-size:11px">${e.client||'—'}</td>
+    <td style="font-size:11px">${e.date||'—'}</td>
+    <td style="font-size:11px">${e.lieu||'—'}</td>
+    <td><span class="badge badge-gold" style="font-size:8px">${(e.dept||'').split(' ')[0]}</span></td>
+    <td>${statusBadge(e.statut)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openModal('event',${e.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('event',${e.id})">✕</button></td>
+  </tr>`).join('');
+  updateBadge('events', STATE.events.filter(e=>e.statut!=='Terminé'&&e.statut!=='Annulé').length);
+}
+
+function filterEvents(q) {
+  document.querySelectorAll('#eventBody tr').forEach(r=>{ r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none'; });
+}
+function filterEventsByType(t) {
+  document.querySelectorAll('#eventBody tr').forEach(r=>{ r.style.display=!t||r.textContent.includes(t)?'':'none'; });
+}
+
+function renderDevis() {
+  const tb = document.getElementById('devisBody');
+  if(!tb) return;
+  if(!STATE.devis.length) { tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--grey);padding:30px;">Aucun devis créé.</td></tr>'; return; }
+  tb.innerHTML = STATE.devis.map(d=>`<tr>
+    <td style="font-size:11px;color:var(--gold)">${d.ref||'—'}</td>
+    <td>${d.client||'—'}</td>
+    <td style="font-size:11px">${d.prestation||'—'}</td>
+    <td style="color:var(--gold);font-weight:500">${d.montant?d.montant.toLocaleString('fr-FR')+'€':'—'}</td>
+    <td>${statusBadge(d.statut)}</td>
+    <td style="font-size:11px">${d.date||'—'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openDoc('devis-gen',${JSON.stringify(d).replace(/"/g,'&quot;')})">📄</button> <button class="btn btn-ghost btn-sm" onclick="openModal('devis',${d.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('devis',${d.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+function filterDevis(q) {
+  document.querySelectorAll('#devisBody tr').forEach(r=>{ r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none'; });
+}
+
+function renderEquipe() {
+  const tb = document.getElementById('equipeBody');
+  if(!tb) return;
+  tb.innerHTML = STATE.equipe.map(m=>`<tr>
+    <td><strong>${m.nom}</strong></td>
+    <td style="font-size:11px">${m.role||'—'}</td>
+    <td><span class="badge badge-gold" style="font-size:8px">${m.grade||'—'}</span></td>
+    <td style="font-size:11px">${m.tel||'—'}</td>
+    <td>${statusBadge(m.statut==='actif'?'actif':'inactif')}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openModal('membre',${m.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('membre',${m.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+function renderStock() {
+  const tb = document.getElementById('stockBody');
+  if(!tb) return;
+  const alerts = document.getElementById('stock-alerts');
+  const low = STATE.stock.filter(s=>s.qte<=s.seuil);
+  if(alerts) alerts.innerHTML = low.map(s=>`<div class="alert alert-warning">⚠️ Stock faible : <strong>${s.nom}</strong> — ${s.qte} restant(s)</div>`).join('');
+  if(!STATE.stock.length) { tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--grey);padding:30px;">Aucun article enregistré.</td></tr>'; return; }
+  tb.innerHTML = STATE.stock.map(s=>`<tr>
+    <td><strong>${s.nom}</strong><br><span style="font-size:10px;color:var(--grey)">${s.notes||''}</span></td>
+    <td><span class="badge badge-grey">${s.cat}</span></td>
+    <td><strong style="color:${s.qte<=s.seuil?'var(--danger)':'var(--gold)'}">${s.qte}</strong></td>
+    <td style="font-size:11px">${s.seuil}</td>
+    <td>${statusBadge(s.etat)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openModal('stock',${s.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('stock',${s.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// FINANCES
+// ══════════════════════════════════════════════
+function addFinance() {
+  const type = document.getElementById('fin-type').value;
+  const montant = parseFloat(document.getElementById('fin-montant').value)||0;
+  const desc = document.getElementById('fin-desc').value||'Sans description';
+  const date = document.getElementById('fin-date').value||new Date().toISOString().split('T')[0];
+  if(!montant) return;
+  STATE.finances.push({id:Date.now(),type,montant,desc,date});
+  persist('finances');
+  renderFinances();
+  document.getElementById('fin-montant').value='';
+  document.getElementById('fin-desc').value='';
+}
+
+function renderFinances() {
+  const ca = STATE.finances.filter(f=>f.type==='revenu').reduce((s,f)=>s+f.montant,0);
+  const dep = STATE.finances.filter(f=>f.type==='depense').reduce((s,f)=>s+f.montant,0);
+  const marge = ca - dep;
+  const fmt = n => n.toLocaleString('fr-FR')+'€';
+  const el = id => document.getElementById(id);
+  if(el('fin-ca')) el('fin-ca').textContent=fmt(ca);
+  if(el('fin-depenses')) el('fin-depenses').textContent=fmt(dep);
+  if(el('fin-marge')) { el('fin-marge').textContent=fmt(marge); el('fin-marge').style.color=marge>=0?'var(--success)':'var(--danger)'; }
+  if(el('fin-obj')) el('fin-obj').textContent='30 000€';
+  const hist = el('finHistory');
+  if(hist) {
+    if(!STATE.finances.length) { hist.innerHTML='<div style="padding:16px;color:var(--grey);font-size:12px;">Aucune opération.</div>'; return; }
+    hist.innerHTML = [...STATE.finances].reverse().map(f=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">
+        <div><div style="color:var(--white)">${f.desc}</div><div style="font-size:10px;color:var(--grey)">${f.date}</div></div>
+        <div style="color:${f.type==='revenu'?'var(--success)':'var(--danger)'};font-weight:500">${f.type==='revenu'?'+':'-'}${f.montant.toLocaleString('fr-FR')}€</div>
+      </div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+// AGENDA / CALENDAR
+// ══════════════════════════════════════════════
+let calDate = new Date();
+function changeMonth(dir) { calDate.setMonth(calDate.getMonth()+dir); renderCalendar(); }
+
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+  const title = document.getElementById('cal-title');
+  const monthEv = document.getElementById('month-events');
+  if(!cal) return;
+  const y=calDate.getFullYear(), m=calDate.getMonth();
+  const mNames=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  if(title) title.textContent = mNames[m]+' '+y;
+  const days=['L','M','M','J','V','S','D'];
+  const firstDay=(new Date(y,m,1).getDay()+6)%7;
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const eventsThisMonth = STATE.events.filter(e=>{ if(!e.date) return false; const d=new Date(e.date); return d.getFullYear()===y&&d.getMonth()===m; });
+  let html = days.map(d=>`<div style="text-align:center;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);padding:6px 2px;">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++) html+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++) {
+    const hasEv = eventsThisMonth.some(e=>new Date(e.date).getDate()===d);
+    const isToday = new Date().getDate()===d&&new Date().getMonth()===m&&new Date().getFullYear()===y;
+    html+=`<div style="text-align:center;padding:6px 2px;font-size:11px;cursor:default;background:${isToday?'var(--gold-bg)':hasEv?'rgba(201,168,76,0.12)':'transparent'};border:${isToday?'1px solid var(--gold)':hasEv?'1px solid rgba(201,168,76,0.2)':'1px solid transparent'};color:${isToday?'var(--gold)':hasEv?'var(--white)':'var(--grey)'};">${d}${hasEv?'<div style="width:4px;height:4px;background:var(--gold);border-radius:50%;margin:1px auto 0;"></div>':''}</div>`;
+  }
+  cal.innerHTML = html;
+  if(monthEv) {
+    if(!eventsThisMonth.length) monthEv.innerHTML='<span style="color:var(--grey);">Aucun événement ce mois-ci.</span>';
+    else monthEv.innerHTML = eventsThisMonth.map(e=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);"><div style="width:2px;height:30px;background:var(--gold);flex-shrink:0;"></div><div><div style="font-size:12px;">${e.nom}</div><div style="font-size:10px;color:var(--grey);">${e.date} · ${e.lieu||'Lieu non défini'}</div></div>${statusBadge(e.statut)}</div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+// PIPELINE
+// ══════════════════════════════════════════════
+function renderPipeline() {
+  const cols = {contact:'col-contact','devis-sent':'col-devis-sent',nego:'col-nego',signe:'col-signe'};
+  Object.values(cols).forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=''; });
+  STATE.prospects.forEach(p=>{
+    const col = document.getElementById(cols[p.etape]);
+    if(!col) return;
+    const card = document.createElement('div');
+    card.className='pipeline-card';
+    card.innerHTML=`<div class="pipeline-card-name">${p.nom}</div><div class="pipeline-card-type">${p.type||'—'} · ${p.source||'—'}</div>${p.budget?`<div class="pipeline-card-val">${p.budget.toLocaleString('fr-FR')}€</div>`:''}<div style="margin-top:8px;display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openModal('prospect',${p.id})" style="padding:3px 8px;">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteItem('prospect',${p.id})" style="padding:3px 8px;">✕</button></div>`;
+    col.appendChild(card);
+  });
+  const el=id=>document.getElementById(id);
+  if(el('pip-total')) el('pip-total').textContent=STATE.prospects.length;
+  if(el('pip-contact')) el('pip-contact').textContent=STATE.prospects.filter(p=>p.etape==='contact').length;
+  if(el('pip-devis')) el('pip-devis').textContent=STATE.prospects.filter(p=>p.etape==='devis-sent').length;
+  if(el('pip-signe')) el('pip-signe').textContent=STATE.prospects.filter(p=>p.etape==='signe').length;
+}
+
+// ══════════════════════════════════════════════
+// COMMS
+// ══════════════════════════════════════════════
+function loadCommsStats() {
+  const el=id=>document.getElementById(id);
+  if(el('comm-insta')) el('comm-insta').textContent=STATE.comms.insta||'0';
+  if(el('comm-tiktok')) el('comm-tiktok').textContent=STATE.comms.tiktok||'0';
+  if(el('comm-google')) el('comm-google').textContent=STATE.comms.google||'0';
+  if(el('inp-insta')) el('inp-insta').value=STATE.comms.insta||'';
+  if(el('inp-tiktok')) el('inp-tiktok').value=STATE.comms.tiktok||'';
+  if(el('inp-google')) el('inp-google').value=STATE.comms.google||'';
+  const cl = document.getElementById('comms-checklist');
+  if(cl) {
+    const tasks=['Publier 1 post Instagram','Publier 1 story Instagram','Répondre aux DMs','Vérifier les avis Google','Publier sur TikTok','Relancer 1 prospect','Demander 1 avis client'];
+    const saved = DB.load('comms-tasks',{});
+    cl.innerHTML = tasks.map((t,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div onclick="toggleCommsTask(${i})" style="width:16px;height:16px;border:1px solid ${saved[i]?'var(--gold)':'rgba(201,168,76,0.3)'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:${saved[i]?'var(--gold)':'transparent'};background:${saved[i]?'var(--gold-bg)':'transparent'};">✓</div>
+      <span style="font-size:12px;color:${saved[i]?'var(--grey)':'var(--white)'};text-decoration:${saved[i]?'line-through':'none'};">${t}</span>
+    </div>`).join('');
+  }
+}
+
+function toggleCommsTask(i) {
+  const saved = DB.load('comms-tasks',{});
+  saved[i]=!saved[i];
+  DB.save('comms-tasks',saved);
+  loadCommsStats();
+}
+
+function updateCommsStats() {
+  STATE.comms.insta=parseInt(document.getElementById('inp-insta')?.value)||0;
+  STATE.comms.tiktok=parseInt(document.getElementById('inp-tiktok')?.value)||0;
+  STATE.comms.google=parseInt(document.getElementById('inp-google')?.value)||0;
+}
+
+function saveCommsStats() {
+  updateCommsStats();
+  persist('comms');
+  loadCommsStats();
+}
+
+// ══════════════════════════════════════════════
+// SALON
+// ══════════════════════════════════════════════
+function loadSalon() {
+  const s=STATE.salon;
+  const el=id=>document.getElementById(id);
+  if(el('salon-date')) el('salon-date').value=s.date||'';
+  if(el('salon-lieu')) el('salon-lieu').value=s.lieu||'';
+  if(el('salon-obj')) el('salon-obj').value=s.obj||25;
+  if(el('salon-budget')) el('salon-budget').value=s.budget||7000;
+  if(el('salon-notes')) el('salon-notes').value=s.notes||'';
+  if(el('salon-charges')) el('salon-charges').value=s.charges||4000;
+  renderExposants();
+  updateSalonBudget();
+  updateSalonCountdown();
+}
+
+function saveSalon() {
+  STATE.salon.date=document.getElementById('salon-date')?.value||'';
+  STATE.salon.lieu=document.getElementById('salon-lieu')?.value||'';
+  STATE.salon.obj=parseInt(document.getElementById('salon-obj')?.value)||25;
+  STATE.salon.budget=parseFloat(document.getElementById('salon-budget')?.value)||7000;
+  STATE.salon.notes=document.getElementById('salon-notes')?.value||'';
+  STATE.salon.charges=parseFloat(document.getElementById('salon-charges')?.value)||0;
+  persist('salon');
+  updateSalonBudget();
+  updateSalonCountdown();
+}
+
+function renderExposants() {
+  const tb=document.getElementById('salon-expo-body');
+  const lbl=document.getElementById('expo-count-lbl');
+  if(!tb) return;
+  const expos=STATE.salon.exposants||[];
+  if(lbl) lbl.textContent=`${expos.filter(e=>e.statut==='Confirmé').length} confirmés / ${expos.length} inscrits`;
+  if(!expos.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--grey);padding:20px;">Aucun exposant.</td></tr>';return;}
+  tb.innerHTML=expos.map(e=>{
+    const pct=e.tarif>0?Math.min(100,Math.round(e.paiement/e.tarif*100)):0;
+    return `<tr>
+      <td><strong>${e.nom}</strong></td>
+      <td style="font-size:11px;color:var(--grey)">${e.metier||'—'}</td>
+      <td><span class="badge badge-gold" style="font-size:8px">${e.stand}</span></td>
+      <td style="color:var(--gold)">${e.tarif}€</td>
+      <td>${statusBadge(e.statut)}</td>
+      <td style="font-size:11px">${e.paiement}€ / ${e.tarif}€ (${pct}%)</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openModal('exposant',${e.id})">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem('exposant',${e.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateSalonBudget() {
+  const expos=STATE.salon.exposants||[];
+  const rev=expos.filter(e=>e.statut!=='Annulé').reduce((s,e)=>s+e.tarif,0);
+  const charges=STATE.salon.charges||0;
+  const result=rev-charges;
+  const el=id=>document.getElementById(id);
+  if(el('salon-rev')) el('salon-rev').textContent=rev.toLocaleString('fr-FR')+' €';
+  if(el('salon-result')){ el('salon-result').textContent=(result>=0?'+':'')+result.toLocaleString('fr-FR')+' €'; el('salon-result').style.color=result>=0?'var(--success)':'var(--danger)'; }
+}
+
+function updateSalonCountdown() {
+  const el=document.getElementById('salon-countdown');
+  if(!el) return;
+  if(!STATE.salon.date){el.textContent='—';return;}
+  const diff=Math.ceil((new Date(STATE.salon.date)-new Date())/86400000);
+  el.textContent=diff>0?diff:'0';
+  el.style.color=diff<30?'var(--danger)':diff<90?'var(--warning)':'var(--gold)';
+}
+
+// ══════════════════════════════════════════════
+// KIT DOCUMENTS
+// ══════════════════════════════════════════════
+const DOCS = {
+  devis:`THE PERFECT AGENCY ✦ — DEVIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Réf. : TPA-2026-XXX | Date : ${new Date().toLocaleDateString('fr-FR')}
+Validité : 15 jours
+
+CLIENT
+Nom : ___________________________
+Email : __________________________
+Tél : ____________________________
+
+ÉVÉNEMENT
+Type : ___________________________
+Date : ___________________________
+Lieu : ___________________________
+Nb invités : _____________________
+
+PRESTATIONS
+─────────────────────────────────
+1. ___________________________ : _______ €
+2. ___________________________ : _______ €
+3. ___________________________ : _______ €
+─────────────────────────────────
+TOTAL HT                         _________ €
+Acompte 30% (à la signature)     _________ €
+Solde 70% (à J-15)               _________ €
+
+CONDITIONS
+— Acompte 30% à la signature
+— Annulation >60j : remboursé | 30-60j : 50% | <30j : 100%
+— TVA non applicable — art. 293B CGI
+
+Signature client : _________________`,
+
+  contrat:`CONTRAT DE PRESTATION — THE PERFECT AGENCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Entre THE PERFECT AGENCY (Roxana Bikindou)
+Tél : 06 65 16 23 86
+Email : theperfecteventweddingagency@gmail.com
+
+Et :
+Nom/Société : ___________________
+Adresse : _______________________
+
+OBJET : _______________________
+DATE : ________________________
+LIEU : ________________________
+
+OBLIGATIONS TPA
+— Fournir les services définis au devis
+— Respecter les délais convenus
+— Assurer la confidentialité totale
+
+OBLIGATIONS CLIENT
+— Régler l'acompte à la signature
+— Fournir les informations nécessaires
+— Régler le solde à J-15
+
+PRIX : _____________ € HT
+Acompte : _________ € (30%)
+Solde : ___________ € (70%)
+
+Fait à Paris, le ___________
+Signature TPA :        Signature Client :`,
+
+  facture:`FACTURE — THE PERFECT AGENCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+N° FAC-2026-XXX | Date : ${new Date().toLocaleDateString('fr-FR')}
+
+THE PERFECT AGENCY — Roxana Bikindou
+Tél : 06 65 16 23 86
+Email : theperfecteventweddingagency@gmail.com
+
+FACTURER À :
+Nom : ___________________________
+Adresse : _______________________
+
+PRESTATION : ___________________
+Date de l'événement : ____________
+
+DÉTAIL
+─────────────────────────────────
+1. ___________________________ : _______ €
+2. ___________________________ : _______ €
+─────────────────────────────────
+TOTAL                            _________ €
+Acompte déjà reçu              - _________ €
+SOLDE À RÉGLER                   _________ €
+
+Virement IBAN : _________________
+Réf. virement : FAC-2026-XXX
+TVA non applicable — art. 293B CGI`,
+
+  relance:`SCRIPT — EMAIL RELANCE CLIENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objet : Votre projet avec The Perfect Agency
+
+Bonjour [Prénom],
+
+Je me permets de revenir vers vous suite à l'envoi de notre devis le [DATE].
+
+Avez-vous eu l'occasion d'en prendre connaissance ? Je reste disponible pour répondre à vos questions ou ajuster la proposition selon vos besoins.
+
+Notre agenda se remplissant rapidement pour [PÉRIODE], n'hésitez pas à revenir vers moi afin que nous puissions bloquer votre date.
+
+Bien cordialement,
+Roxana Bikindou
+The Perfect Agency
+06 65 16 23 86 | @theperfectagency`,
+
+  welcome:`SCRIPT — KIT BIENVENUE CLIENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bonjour [Prénom],
+
+C'est avec un immense plaisir que nous vous accueillons dans la famille TPA.
+
+Votre événement [TYPE] du [DATE] est désormais entre nos mains, et nous ferons de chaque détail un souvenir impérissable.
+
+PROCHAINES ÉTAPES :
+1. Appel de cadrage sous 48h
+2. Envoi du rétroplanning personnalisé
+3. Premier point mensuel
+
+Contact direct : 06 65 16 23 86
+Instagram : @theperfectagency
+
+L'alchimie parfaite commence maintenant. ✦
+The Perfect Agency`,
+
+  brief:`BRIEF ÉVÉNEMENT — THE PERFECT AGENCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Date du brief : _________________
+Chargé(e) de projet : ____________
+
+INFORMATIONS CLIENT
+Nom(s) : ________________________
+Tél : ___________________________
+Email : _________________________
+
+ÉVÉNEMENT
+Type : __________________________
+Date souhaitée : _________________
+Lieu envisagé : __________________
+Nombre d'invités : _______________
+Budget global : __________________
+
+VISION & AMBIANCE
+Style/Thème : ___________________
+Couleurs : ______________________
+Inspiration : ____________________
+
+PRESTATIONS SOUHAITÉES
+□ Organisation complète
+□ Service en salle
+□ Réseau prestataires
+□ Décoration & scénographie
+□ Bar lounge
+□ Signalétique prestige
+□ Suite nuptiale
+
+PRESTATAIRES DÉJÀ RÉSERVÉS
+Traiteur : ______________________
+Photographe : ___________________
+DJ/Musique : ____________________
+Lieu : __________________________
+
+POINTS D'ATTENTION
+_________________________________
+_________________________________
+
+Signature : ______________________`,
+
+  'script-dm':`SCRIPT DM INSTAGRAM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERSION 1 — Réponse demande devis :
+"Bonjour [Prénom] 🤍 Merci pour votre message !
+Pour votre [TYPE D'ÉVÉNEMENT] du [DATE], je serais ravie de vous accompagner.
+Pouvez-vous me donner plus de détails sur votre projet ? (Lieu envisagé, nombre d'invités, budget approximatif)
+Je reviens vers vous sous 24h avec une proposition personnalisée ✨
+— Roxana, The Perfect Agency"
+
+VERSION 2 — Demande d'infos générales :
+"Bonjour ! Merci de votre intérêt pour The Perfect Agency 🖤
+Nous proposons 3 types de prestations :
+◆ Organisation complète mariages & galas
+◆ Service en salle & réception
+◆ Mise en relation prestataires certifiés
+Quel est votre projet ? Je vous prépare une proposition sur-mesure 🌟"`,
+
+  'script-presta':`SCRIPT DÉMARCHAGE PRESTATAIRE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objet : Partenariat réseau — The Perfect Agency
+
+Bonjour [Prénom],
+
+Je suis Roxana Bikindou, fondatrice de The Perfect Agency, agence Event & Wedding basée en Île-de-France.
+
+Nous développons un réseau de prestataires certifiés pour accompagner nos couples sur des mariages de prestige. Votre travail correspond parfaitement à nos standards d'excellence.
+
+CE QUE NOUS PROPOSONS :
+— Recommandations exclusives à notre clientèle premium
+— Référencement dans notre Private Partner Office
+— Accès exposant à notre Salon du Mariage TPA
+— Apport de clients qualifiés et sérieux
+
+Seriez-vous disponible pour un échange de 15 min cette semaine ?
+
+Roxana Bikindou | The Perfect Agency
+06 65 16 23 86 | @theperfectagency`,
+
+  'script-salon':`EMAIL INVITATION EXPOSANT SALON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objet : Invitation exposant — Salon du Mariage TPA · [DATE]
+
+Bonjour [Prénom],
+
+The Perfect Agency organise son premier Salon du Mariage le [DATE] en Île-de-France.
+
+CET ÉVÉNEMENT EN CHIFFRES :
+— 300+ futurs mariés attendus
+— 25 exposants sélectionnés maximum
+— Ambiance prestige noir & or
+
+EN TANT QUE PARTENAIRE TPA :
+— Priorité d'inscription
+— Remise 10% sur votre stand
+— Mention sur tous nos supports
+
+FORMULES STANDS :
+Découverte (4m²) : 250€
+Essentiel (6m²) : 400€
+Prestige (9m²) : 650€
+Sponsor Or (12m²) : 1 200€
+
+Intéressé(e) ? Répondez à ce message — places limitées.
+
+Roxana Bikindou | The Perfect Agency
+06 65 16 23 86 | @theperfectagency`,
+
+  standards:`STANDARDS TPA — CHARTE D'EXCELLENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TENUE
+— Veste noire avec logo PA brodé or
+— Pantalon/jupe noir(e) impeccable
+— Chaussures noires cirées
+— Cheveux attachés ou coiffés
+
+PONCTUALITÉ
+— Arrivée 1h avant le client minimum
+— Brief équipe 45 min avant
+— Zéro retard toléré
+
+ATTITUDE
+— Discrétion absolue
+— Sourire en toutes circonstances
+— Vouvoiement systématique
+— Téléphone perso rangé
+
+COMMUNICATION
+— Walkie-talkie ou groupe WhatsApp
+— Rapport incident immédiat à Roxana
+— Validation de chaque étape
+
+APRÈS LA PRESTATION
+— Rangement impeccable du lieu
+— Rapport de prestation sous 24h
+— Remontée des points d'amélioration`,
+
+  integration:`GUIDE D'INTÉGRATION — THE PERFECT AGENCY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bienvenue dans la Maison TPA ✦
+
+JOUR 1 — ACCUEIL
+□ Présentation de l'équipe
+□ Remise du kit tenue TPA
+□ Lecture de la charte d'excellence
+□ Visite du logiciel de gestion
+□ Accès groupe WhatsApp équipe
+
+SEMAINE 1 — FORMATION
+□ Shadow sur une prestation réelle
+□ Formation protocole service
+□ Formation communication client
+□ Formation gestion des imprévus
+□ Quiz standards TPA
+
+PREMIÈRE PRESTATION
+□ Briefing complet J-7
+□ Visite du lieu J-1
+□ Présence complète jour J
+□ Débriefing post-prestation
+□ Évaluation par Roxana
+
+VALEURS TPA
+— Excellence dans chaque détail
+— Discrétion et professionnalisme
+— Esprit d'équipe et bienveillance
+— Amélioration continue`,
+
+  evaluation:`GRILLE D'ÉVALUATION POST-PRESTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Membre évalué : _________________
+Prestation : ____________________
+Date : __________________________
+Évaluateur : Roxana Bikindou
+
+CRITÈRES (note /5)
+
+Ponctualité           : ___ / 5
+Tenue & présentation  : ___ / 5
+Attitude client        : ___ / 5
+Maîtrise technique    : ___ / 5
+Travail en équipe     : ___ / 5
+Gestion des imprévus  : ___ / 5
+Initiative            : ___ / 5
+
+TOTAL : ___ / 35
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+POINTS FORTS :
+_________________________________
+
+AXES D'AMÉLIORATION :
+_________________________________
+
+DÉCISION :
+□ Excellent — recommandé priorité
+□ Bien — à reconvoquer
+□ Passable — à surveiller
+□ Insuffisant — non reconvoqué
+
+Signature Roxana : ______________`
+};
+
+function openDoc(id, data) {
+  if(id==='devis-gen' && data) {
+    const d = typeof data === 'string' ? JSON.parse(data.replace(/&quot;/g,'"')) : data;
+    const content = `THE PERFECT AGENCY ✦ — DEVIS ${d.ref||''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Date : ${d.date||new Date().toLocaleDateString('fr-FR')} | Validité : 15 jours
+
+CLIENT : ${d.client||'—'}
+PRESTATION : ${d.prestation||'—'}
+
+MONTANT HT : ${d.montant?d.montant.toLocaleString('fr-FR')+'€':'—'}
+Acompte 30% : ${d.montant?Math.round(d.montant*0.3).toLocaleString('fr-FR')+'€':'—'}
+Solde 70% : ${d.montant?Math.round(d.montant*0.7).toLocaleString('fr-FR')+'€':'—'}
+Acompte reçu : ${d.acompte?d.acompte.toLocaleString('fr-FR')+'€':'0€'}
+
+NOTES : ${d.notes||'—'}
+
+CONDITIONS
+— Acompte 30% à la signature
+— TVA non applicable — art. 293B CGI
+
+Signature client : _________________`;
+    showViewer('Devis '+d.ref, content);
+    return;
+  }
+  const content = DOCS[id];
+  if(!content) { alert('Document en cours de rédaction.'); return; }
+  const titles = {devis:'Devis Standard',contrat:'Contrat de Prestation',facture:'Facture Standard',relance:'Email de Relance',welcome:'Kit Bienvenue Client',brief:'Brief Événement','script-dm':'Script DM Instagram','script-presta':'Script Démarchage Prestataire','script-salon':'Email Invitation Exposant',standards:'Standards TPA',integration:'Guide d\'Intégration',evaluation:'Grille d\'Évaluation'};
+  showViewer(titles[id]||id, content);
+}
+
+function showViewer(title, content) {
+  document.getElementById('doc-viewer').classList.add('open');
+  document.getElementById('doc-viewer-title').textContent='MODÈLE — '+title;
+  document.getElementById('doc-content').value=content;
+}
+function closeViewer() { document.getElementById('doc-viewer').classList.remove('open'); }
+function copyDoc() { const t=document.getElementById('doc-content'); t.select(); navigator.clipboard.writeText(t.value).then(()=>{}); }
+function downloadDoc() {
+  const t=document.getElementById('doc-content');
+  const title=document.getElementById('doc-viewer-title').textContent.replace('MODÈLE — ','');
+  const blob=new Blob([t.value],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=title.replace(/[^a-zA-Z0-9]/g,'_')+'.txt'; a.click();
+}
+
+// ══════════════════════════════════════════════
+// NOTES
+// ══════════════════════════════════════════════
+function loadNotes() {
+  const el=document.getElementById('notes-main');
+  if(el) el.value=STATE.notes.main||'';
+  renderArchive();
+}
+function saveNotes() {
+  STATE.notes.main=document.getElementById('notes-main')?.value||'';
+  persist('notes');
+}
+function archiveNote() {
+  const content=document.getElementById('notes-main')?.value||'';
+  if(!content.trim()) return;
+  STATE.notes.archive.unshift({date:new Date().toLocaleDateString('fr-FR'),content});
+  STATE.notes.main='';
+  if(document.getElementById('notes-main')) document.getElementById('notes-main').value='';
+  persist('notes');
+  renderArchive();
+}
+function clearNotes() {
+  if(!confirm('Effacer la note actuelle ?')) return;
+  STATE.notes.main='';
+  if(document.getElementById('notes-main')) document.getElementById('notes-main').value='';
+  persist('notes');
+}
+function renderArchive() {
+  const el=document.getElementById('notes-archive');
+  if(!el) return;
+  if(!STATE.notes.archive.length) { el.innerHTML='<span style="color:var(--grey);">Aucune note archivée.</span>'; return; }
+  el.innerHTML=STATE.notes.archive.slice(0,10).map((n,i)=>`<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <div style="font-size:10px;color:var(--gold);margin-bottom:4px;">${n.date}</div>
+    <div style="font-size:12px;color:var(--grey-l);white-space:pre-wrap;">${n.content.slice(0,200)}${n.content.length>200?'...':''}</div>
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// HOME DASHBOARD
+// ══════════════════════════════════════════════
+function updateHome() {
+  const el=id=>document.getElementById(id);
+  if(el('home-date')) el('home-date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  if(el('kpi-clients')) el('kpi-clients').textContent=STATE.clients.filter(c=>c.statut!=='Annulé').length;
+  if(el('kpi-events')) el('kpi-events').textContent=STATE.events.filter(e=>e.statut!=='Annulé').length;
+  const ca=STATE.devis.filter(d=>d.statut==='Signé').reduce((s,d)=>s+d.montant,0);
+  if(el('kpi-ca')) el('kpi-ca').textContent=ca?ca.toLocaleString('fr-FR')+'€':'0€';
+  if(el('kpi-devis')) el('kpi-devis').textContent=STATE.devis.filter(d=>d.statut==='En attente'||d.statut==='Envoyé').length;
+
+  // Next events
+  const upcoming=STATE.events.filter(e=>e.date&&new Date(e.date)>=new Date()).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,3);
+  if(el('home-next-events')) {
+    if(!upcoming.length) el('home-next-events').innerHTML='<span style="color:var(--grey);">Aucun événement à venir.</span>';
+    else el('home-next-events').innerHTML=upcoming.map(e=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;"><div><strong>${e.nom}</strong><br><span style="color:var(--grey);font-size:10px;">${e.date} · ${e.lieu||'Lieu TBD'}</span></div>${statusBadge(e.statut)}</div>`).join('');
+  }
+
+  // Alerts
+  const alerts=[];
+  const lowStock=STATE.stock.filter(s=>s.qte<=s.seuil);
+  if(lowStock.length) alerts.push(`⚠️ ${lowStock.length} article(s) en stock faible`);
+  const pendingDevis=STATE.devis.filter(d=>d.statut==='Envoyé').length;
+  if(pendingDevis) alerts.push(`📄 ${pendingDevis} devis en attente de réponse`);
+  const pendingProspects=STATE.prospects.filter(p=>p.etape==='contact').length;
+  if(pendingProspects) alerts.push(`👤 ${pendingProspects} prospect(s) à relancer`);
+  if(!STATE.salon.date) alerts.push(`🎪 Date du Salon du Mariage non définie`);
+  if(el('home-alerts')) {
+    if(!alerts.length) el('home-alerts').innerHTML='<div class="alert alert-success">✓ Tout est en ordre</div>';
+    else el('home-alerts').innerHTML=alerts.map(a=>`<div class="alert alert-warning">${a}</div>`).join('');
+  }
+  updateBadge('clients',STATE.clients.filter(c=>c.statut!=='Annulé'&&c.statut!=='Terminé').length);
+  updateBadge('events',STATE.events.filter(e=>e.statut!=='Annulé'&&e.statut!=='Terminé').length);
+}
+
+function updateBadge(name,val) {
+  const el=document.getElementById('badge-'+name);
+  if(el) el.textContent=val;
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  updateHome();
+  renderClients();
+  renderEvents();
+  renderDevis();
+  renderEquipe();
+  renderStock();
+  renderFinances();
+  renderCalendar();
+  loadSalon();
+  loadNotes();
+  renderPipeline();
+
+  // Overlay click close
+  document.getElementById('modal-bg').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+  // Date
+  setInterval(()=>{ const el=document.getElementById('home-date'); if(el&&document.getElementById('p-home').classList.contains('active')) el.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }, 60000);
+});
+</script>
+</body>
+</html>
